@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مسابقة العربية بين يديك - التفاعلية</title>
+    <style>
+        @import url('https://googleapis.com');
+
+        :root {
+            --primary: #1e6f5c;
+            --secondary: #289672;
+            --accent: #e6dd3b;
+            --bg-light: #f4f9f9;
+            --dark: #1d2d2a;
+            --correct: #2ecc71;
+            --wrong: #e74c3c;
+            --card-bg: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e6f5c 0%, #0f3d33 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--dark);
+            padding: 20px;
+        }
+
+        .game-wrapper {
+            width: 100%;
+            max-width: 850px;
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            overflow: hidden;
+            margin: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header & Stats */
+        .game-header {
+            background: var(--primary);
+            color: #fff;
+            padding: 18px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            border-bottom: 4px solid var(--accent);
+        }
+
+        .badge-box {
+            background: rgba(255,255,255,0.15);
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .timer-box {
+            background: #fff;
+            color: var(--primary);
+            padding: 8px 18px;
+            border-radius: 50px;
+            font-weight: 800;
+            font-size: 1.15rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+        }
+
+        .timer-box.warning {
+            background: var(--wrong);
+            color: #fff;
+            animation: pulse 0.8s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+            100% { transform: scale(1); }
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--secondary);
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        /* Screens */
+        .screen {
+            padding: 35px 30px;
+            text-align: center;
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .start-title {
+            font-size: 2.1rem;
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-weight: 800;
+        }
+
+        .start-desc {
+            font-size: 1.1rem;
+            color: #555;
+            line-height: 1.8;
+            margin-bottom: 25px;
+        }
+
+        .info-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .info-card {
+            background: var(--bg-light);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #d8eae6;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .level-tag {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            background: #e8f6f3;
+            color: var(--primary);
+        }
+
+        .question-text {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--dark);
+            margin-bottom: 28px;
+            line-height: 1.6;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+            .question-text {
+                font-size: 1.25rem;
+            }
+        }
+
+        .option-btn {
+            background: var(--bg-light);
+            border: 2px solid #dce8e6;
+            border-radius: 14px;
+            padding: 16px 20px;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--dark);
+            cursor: pointer;
+            transition: all 0.25s ease;
+            text-align: right;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            background: #e3f3ef;
+            border-color: var(--secondary);
+            transform: translateY(-2px);
+        }
+
+        .option-btn:disabled {
+            cursor: default;
+        }
+
+        .option-btn.correct {
+            background: #d4edda;
+            border-color: var(--correct);
+            color: #155724;
+        }
+
+        .option-btn.wrong {
+            background: #f8d7da;
+            border-color: var(--wrong);
+            color: #721c24;
+        }
+
+        /* Feedback Box */
+        .feedback-box {
+            margin-top: 20px;
+            padding: 16px 20px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            display: none;
+            text-align: right;
+            line-height: 1.6;
+        }
+
+        .feedback-box.correct {
+            display: block;
+            background: #e8f8f0;
+            border-right: 6px solid var(--correct);
+            color: #155724;
+        }
+
+        .feedback-box.wrong {
+            display: block;
+            background: #fdf0f0;
+            border-right: 6px solid var(--wrong);
+            color: #721c24;
+        }
+
+        /* Buttons */
+        .main-btn {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 14px 36px;
+            font-size: 1.2rem;
+            font-weight: 800;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 15px rgba(30, 111, 92, 0.3);
+        }
+
+        .main-btn:hover {
+            background: var(--secondary);
+            transform: translateY(-2px);
+        }
+
+        .next-btn {
+            margin-top: 20px;
+            display: none;
+        }
+
+        /* Result Screen */
+        .score-circle {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            background: var(--bg-light);
+            border: 8px solid var(--secondary);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin: 20px auto;
+            font-weight: 800;
+        }
+
+        .score-circle span.big {
+            font-size: 2.4rem;
+            color: var(--primary);
+        }
+
+        /* Footer Credits */
+        .game-footer {
+            background: #f0f5f4;
+            border-top: 2px solid #dce8e6;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 800;
+            font-size: 1rem;
+            color: var(--primary);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .footer-right {
+            text-align: right;
+        }
+
+        .footer-left {
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-wrapper">
+    <!-- Top Header -->
+    <div class="game-header" id="gameHeader" style="display: none;">
+        <div class="badge-box">
+            <span>السؤال:</span>
+            <span id="qCounter">1 / 50</span>
+        </div>
+        <div class="timer-box" id="timerDisplay">⏱ 30 ثانية</div>
+        <div class="badge-box">
+            <span>النقاط:</span>
+            <span id="scoreDisplay">0</span>
+        </div>
+    </div>
+
+    <div class="progress-bar-container" id="progressContainer" style="display: none;">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <!-- Start Screen -->
+    <div class="screen active" id="startScreen">
+        <h1 class="start-title">مسابقة التحدي التفاعلية</h1>
+        <p class="start-desc">
+            اختبر معلوماتك في <strong>الوحدة الأولى (التحية والتعارف)</strong> و<strong>الوحدة الثانية (الأسرة)</strong> عبر 50 سؤالاً متدرج الصعوبة مع تصحيح فوري ومؤثرات صوتية تفاعلية.
+        </p>
+        <div class="info-cards">
+            <div class="info-card">📚 50 سؤالاً غير مكرر</div>
+            <div class="info-card">⏱ 30 ثانية لكل سؤال</div>
+            <div class="info-card">📈 متدرجة الصعوبة</div>
+            <div class="info-card">🏆 10 نقاط لكل إجابة</div>
+        </div>
+        <button class="main-btn" onclick="startGame()">ابدأ المسابقة الآن</button>
+    </div>
+
+    <!-- Quiz Screen -->
+    <div class="screen" id="quizScreen">
+        <div class="level-tag" id="levelBadge">المستوى الأول: مبتدئ</div>
+        <div class="question-text" id="questionText">نص السؤال يظهر هنا</div>
+        <div class="options-grid" id="optionsGrid"></div>
+        <div class="feedback-box" id="feedbackBox"></div>
+        <button class="main-btn next-btn" id="nextBtn" onclick="nextQuestion()">السؤال التالي ⬅</button>
+    </div>
+
+    <!-- End Screen -->
+    <div class="screen" id="endScreen">
+        <h2 class="start-title">انتهت المسابقة! 🎉</h2>
+        <div class="score-circle">
+            <span class="big" id="finalScore">0</span>
+            <span>من 500 نقطة</span>
+        </div>
+        <p class="start-desc" id="finalSummary"></p>
+        <button class="main-btn" onclick="restartGame()">إعادة اللعب مرة أخرى 🔄</button>
+    </div>
+
+    <!-- Footer Credits (Opposite Sides) -->
+    <footer class="game-footer">
+        <div class="footer-right">تصميم: أ/ الشيماء مختار</div>
+        <div class="footer-left">بعناية: كورس المعلم الحر</div>
+    </footer>
+</div>
+
+<script>
+    // المؤثرات الصوتية المدمجة عبر Web Audio API (تعمل بدون إنترنت أو ملفات خارجية)
+    let audioCtx = null;
+
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    function playSound(type) {
+        try {
+            initAudio();
+            const now = audioCtx.currentTime;
+            if (type === 'correct') {
+                // نغمة نجاح مبهجة
+                const notes = [523.25, 659.25, 783.99];
+                notes.forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+                    gain.gain.setValueAtTime(0.2, now + idx * 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.25);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + idx * 0.1);
+                    osc.stop(now + idx * 0.1 + 0.25);
+                });
+            } else if (type === 'wrong') {
+                // نغمة خطأ واضحة
+                const notes = [300, 220];
+                notes.forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.18);
+                    gain.gain.setValueAtTime(0.18, now + idx * 0.18);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.18 + 0.25);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + idx * 0.18);
+                    osc.stop(now + idx * 0.18 + 0.25);
+                });
+            }
+        } catch (e) {
+            console.warn("Audio playback skipped:", e);
+        }
+    }
+
+    // 50 سؤالاً غير مكرر ومتدرج الصعوبة من محتوى الـ PDF (الوحدة الأولى والثانية)
+    const questions = [
+        // --- المستوى الأول: سهل (الأسئلة 1 - 17) ---
+        {
+            level: "المستوى الأول: سهل (التحية والأعداد)",
+            q: "ما الرد الصحيح على تحية: «السَّلامُ عَلَيْكُم»؟",
+            options: ["وَعَلَيْكُمُ السَّلام", "مَعَ السَّلامَة", "بِخَيْرٍ وَالحَمْدُ لِلَّه", "أَسْمِي خَالِد"],
+            correct: 0,
+            explanation: "الرد الصحيح على «السلام عليكم» في جميع حوارات الوحدة هو: «وعليكم السلام»."
+        },
+        {
+            level: "المستوى الأول: سهل (التحية والأعداد)",
+            q: "بماذا نجيب عن السؤال: «كَيْفَ حالُكَ؟» كما ورد في الحوار الأول؟",
+            options: ["أَنَا مِنْ مِصْر", "بِخَيْرٍ، وَالحَمْدُ لِلَّه", "أَهْلاً وَسَهْلاً", "هَذَا أَخِي"],
+            correct: 1,
+            explanation: "نجيب عن السؤال عن الحال بقولنا: «بِخَيْرٍ، وَالحَمْدُ لِلَّه»."
+        },
+        {
+            level: "المستوى الأول: سهل (التحية والأعداد)",
+            q: "ماذا نقول عند انتهاء اللقاء والانصراف كما في الحوار الخامس؟",
+            options: ["كَيْفَ حالُكَ؟", "مِنْ أَيْنَ أَنْتَ؟", "مَعَ السَّلامَة", "مَا اسْمُكَ؟"],
+            correct: 2,
+            explanation: "عند الوداع في نهاية الحوار نقول: «مَعَ السَّلامَة»."
+        },
+        {
+            level: "المستوى الأول: سهل (التحية والأعداد)",
+            q: "ما عنوان الوحدة الأولى في الكتاب؟",
+            options: ["الأُسْرَة", "السَّكَن", "التَّحِيَّةُ وَالتَّعَارُفُ", "الحَيَاةُ اليَوْمِيَّة"],
+            correct: 2,
+            explanation: "عنوان الوحدة الأولى في الصفحة الأولى هو: «التَّحِيَّةُ وَالتَّعَارُفُ»."
+        },
+        {
+            level: "المستوى الأول: سهل (التحية والأعداد)",
+            q: "ما عنوان الوحدة الثانية في الكتاب؟",
+            options: ["الأُسْرَةُ", "المَسْجِدُ", "المَدْرَسَةُ", "السَّفَرُ"],
+            correct: 0,
+            explanation: "عنوان الوحدة الثانية في صفحة 23 هو: «الأُسْرَةُ»."
+        },
+        {
+            level: "المستوى الأول: سهل (التحية والأعداد)",
+            q: "ما الكلمة التي تدل على الرقم ( ١ )؟",
+            options: ["اِثْنَان", "وَاحِد", "ثَلاثَة", "أَرْبَعَة"],
+            correct: 1,
+            explanation: "الرقم ( ١ ) يُكتب بالحروف: «وَاحِد»."
+        },
+        {
+            level: "المستوى الأول: سهل (التحية والأعداد)",
+            q: "ما العدد الذي يأتي مباشرة بعد «ثَلاثَة»؟",
+            options: ["اِثْنَان", "أَرْبَعَة", "خَمْسَة", "سِتَّة"],
+            correct: 1,
+            explanation: "ترتيب الأعداد: واحد، اثنان، ثلاثة، ثم «أَرْبَعَة»."
+        },
+        {
+            level: "المستوى الأول: سهل (التحية والأعداد)",
+            q: "أي رقم مما يلي يُمثّل كلمة «خَمْسَة»؟",
+            options: ["٣", "٤", "٥", "٦"],
+            correct: 2,
+            explanation: "كلمة «خَمْسَة» تُكتب بالرقم العربي ( ٥ )."
+        },
+        {
+            level: "المستوى الأول: سهل (التحية والأعداد)",
+            q: "ما الكلمة الصحيحة التي تمثل الرقم ( ٧ )؟",
+            options: ["سِتَّة", "سَبْعَة", "ثَمَانِيَة", "تِسْعَة"],
+            correct: 1,
+            explanation: "الرقم ( ٧ ) هو «سَبْعَة» كما ورد في صفحة 30."
+        },
+        {
+            level: "المستوى الأول: سهل (التحية والأعداد)",
+            q: "ما العدد الذي يسبق «عَشَرَة» مباشرةً؟",
+            options: ["ثَمَانِيَة", "سَبْعَة", "تِسْعَة", "سِتَّة"],
+            correct: 2,
+            explanation: "العدد الذي يسبق عشرة (١٠) هو «تِسْعَة» (٩)."
+        },
+        {
+            level: "المستوى الأول: سهل (التحية والأعداد)",
+            q: "أي ضمير يستخدمه المتكلم (المذكر أو المؤنث) للحديث عن نفسه؟",
+            options: ["هُوَ", "هِيَ", "أَنَا", "أَنْتَ"],
+            correct: 2,
+            explanation: "الضمير «أَنَا» يُستخدم للمتكلم المفرد مذكراً كان أو مؤنثاً."
+        },
+        {
+            level: "المستوى الأول: سهل (التحية والأعداد)",
+            q: "أي اسم إشارة نستخدمه للمفرد المذكر القريب مثل (أَخِي)؟",
+            options: ["هَذِهِ", "هَذَا", "هِيَ", "أَنْتِ"],
+            correct: 1,
+            explanation: "نستخدم اسم الإشارة «هَذَا» للمفرد المذكر: «هَذَا أَخِي»."
+        },
+        {
+            level: "المستوى الأول: سهل (التحية والأعداد)",
+            q: "أي اسم إشارة نستخدمه للمفردة المؤنثة القريبة مثل (أُخْتِي)؟",
+            options: ["هَذَا", "هُوَ", "هَذِهِ", "أَنْتَ"],
+            correct: 2,
+            explanation: "نستخدم اسم الإشارة «هَذِهِ» للمفردة المؤنثة: «هَذِهِ أُخْتِي»."
+        },
+        {
+            level: "المستوى الأول: سهل (التحية والأعداد)",
+            q: "ما العبارة الترحيبية التي قالها شريف لمحمد في نهاية الحوار الثالث؟",
+            options: ["مَا شاءَ اللَّه", "أَهْلاً وَسَهْلاً", "هَيَّا بِنَا", "اللهُ أَكْبَر"],
+            correct: 1,
+            explanation: "للترحيب بشخص بعد التعرف عليه نقول: «أَهْلاً وَسَهْلاً»."
+        },
+        {
+            level: "المستوى الأول: سهل (التحية والأعداد)",
+            q: "في الحوار الأول من الوحدة الأولى، من كان يتحاور مع «خَالِد»؟",
+            options: ["شَرِيف", "خَلِيل", "بَدْر", "عَمَّار"],
+            correct: 1,
+            explanation: "الحوار الأول في صفحة 3 دار بين «خَالِد» و«خَلِيل»."
+        },
+        {
+            level: "المستوى الأول: سهل (التحية والأعداد)",
+            q: "في الحوار الثاني من الوحدة الأولى، ما اسم الفتاة التي تحاورت مع «خَوْلَة»؟",
+            options: ["خَدِيجَة", "فَاطِمَة", "آمنَة", "سَعِيدَة"],
+            correct: 0,
+            explanation: "الحوار الثاني في صفحة 3 دار بين «خَوْلَة» و«خَدِيجَة»."
+        },
+        {
+            level: "المستوى الأول: سهل (التحية والأعداد)",
+            q: "ما التعبير الذي كرره «عَمَّار» إعجاباً عندما رأى صورة أسرة علي؟",
+            options: ["هَيَّا بِنَا!", "مَا شَاءَ اللَّهُ!", "مَعَ السَّلامَة!", "بِخَيْرٍ!"],
+            correct: 1,
+            explanation: "قال عمار: «مَا شَاءَ اللَّهُ!» عند رؤية صورة أسرة علي والتعرف على أفرادها."
+        },
+
+        // --- المستوى الثاني: متوسط (الأسئلة 18 - 34) ---
+        {
+            level: "المستوى الثاني: متوسط (الحوارات والمفردات)",
+            q: "في الحوار الثالث (صفحة 4)، من أي بلد «شَرِيف»؟",
+            options: ["مِنْ تُرْكِيَا", "مِنْ مِصْر", "مِنْ بَاكِسْتَان", "مِنْ سُورِيَا"],
+            correct: 2,
+            explanation: "أجاب شريف في الحوار الثالث: «أَنَا مِنْ بَاكِسْتَان»."
+        },
+        {
+            level: "المستوى الثاني: متوسط (الحوارات والمفردات)",
+            q: "في الحوار الثالث، ما جنسية «مُحَمَّد»؟",
+            options: ["تُرْكِيّ", "سُورِيّ", "مِصْرِيّ", "بَاكِسْتَانِيّ"],
+            correct: 0,
+            explanation: "قال محمد عن نفسه: «أَنَا تُرْكِيّ. أَنَا مِنْ تُرْكِيَا»."
+        },
+        {
+            level: "المستوى الثاني: متوسط (الحوارات والمفردات)",
+            q: "في الحوار الرابع (صفحة 4)، ما جنسية «زَيْنَب» ومن أين «مَرْيَم»؟",
+            options: ["زينب سورية ومريم مصرية", "زينب مصرية ومريم من سوريا", "زينب تركية ومريم من باكستان", "زينب باكستانية ومريم من تركيا"],
+            correct: 1,
+            explanation: "قالت زينب: «نَعَمْ، أَنَا مِصْرِيَّة»، وقالت مريم: «أَنَا سُورِيَّة. أَنَا مِنْ سُورِيَا»."
+        },
+        {
+            level: "المستوى الثاني: متوسط (الحوارات والمفردات)",
+            q: "في الحوار الخامس (صفحة 5)، ما مهنة أخِ أحمد وما مهنة صديقِه؟",
+            options: ["أخوه طبيب وصديقه مدرس", "أخوه مدرس وصديقه مهندس", "أخوه مهندس وصديقه طالب", "أخوه طالب وصديقه معلم"],
+            correct: 1,
+            explanation: "قال أحمد: «هَذَا أَخِي. هُوَ مُدَرِّس» ثم قال: «هَذَا صَدِيقِي. هُوَ مُهَنْدِس»."
+        },
+        {
+            level: "المستوى الثاني: متوسط (الحوارات والمفردات)",
+            q: "في الحوار السادس (صفحة 5)، قدمت «نَدَى» أختها وصديقتها إلى «هُدَى»، فما مهنتاهما؟",
+            options: ["أختها معلمة وصديقتها طبيبة", "أختها طبيبة وصديقتها طالبة", "أختها طالبة وصديقتها مهندسة", "أختها مدرسة وصديقتها معلمة"],
+            correct: 1,
+            explanation: "قالت ندى: «هَذِهِ أُخْتِي. هِيَ طَبِيبَة» و«هَذِهِ صَدِيقَتِي. هِيَ طَالِبَة»."
+        },
+        {
+            level: "المستوى الثاني: متوسط (الحوارات والمفردات)",
+            q: "في حوار أسرة علي (صفحة 25)، ما اسم والد علي وما مهنته؟",
+            options: ["عَدْنَان - مُهَنْدِس", "عِيسَى - طَالِب", "سَالِم - طَبِيب", "عُثْمَان - مُدَرِّس"],
+            correct: 0,
+            explanation: "قال علي: «هَذَا وَالِدِي عَدْنَان. هُوَ مُهَنْدِس»."
+        },
+        {
+            level: "المستوى الثاني: متوسط (الحوارات والمفردات)",
+            q: "في حوار أسرة علي (صفحة 25)، ما اسم والدة علي وما مهنتها؟",
+            options: ["عَبْلَة - مُعَلِّمَة", "سَعِيدَة - طَبِيبَة", "آمِنَة - مُدَرِّسَة", "خَدِيجَة - طَالِبَة"],
+            correct: 1,
+            explanation: "قال علي لعمار: «هَذِهِ وَالِدَتِي سَعِيدَة. هِيَ طَبِيبَة»."
+        },
+        {
+            level: "المستوى الثاني: متوسط (الحوارات والمفردات)",
+            q: "من هما أخو علي وأخته في الحوار الأول من الوحدة الثانية (صفحة 25)؟",
+            options: ["أخوه سعد وأخته فاطمة", "أخوه عيسى (طالب) وأخته عبلة (معلمة)", "أخوه سعيد (مهندس) وأخته هدى (طبيبة)", "أخوه بدر (طالب) وأخته زينب (طالبة)"],
+            correct: 1,
+            explanation: "قال علي: «هَذَا أَخِي عِيسَى. هُوَ طَالِب» و«هَذِهِ أُخْتِي عَبْلَة. هِيَ مُعَلِّمَة»."
+        },
+        {
+            level: "المستوى الثاني: متوسط (الحوارات والمفردات)",
+            q: "حسب شجرة أسرة الرسول ﷺ في صفحة 26، من هما والده ووالدته؟",
+            options: ["عبد المطلب وصفية", "عبد الله وآمنة", "هاشم وفاطمة", "العباس ورقية"],
+            correct: 1,
+            explanation: "ورد في الحوار الثاني صفحة 26: «هَذَا وَالِدُهُ عَبْدُ اللَّه» و«هَذِهِ وَالِدَتُهُ آمِنَة»."
+        },
+        {
+            level: "المستوى الثاني: متوسط (الحوارات والمفردات)",
+            q: "من هو جدُّ الرسول ﷺ ومن هي عمته المذكوران في شجرة الأسرة (صفحة 26)؟",
+            options: ["جده هاشم وعمته زينب", "جده عبد المطلب وعمته صفية", "جده أبو طالب وعمته أم كلثوم", "جده القاسم وعمته فاطمة"],
+            correct: 1,
+            explanation: "جاء في النص: «وَهَذَا جَدُّهُ عَبْدُ المُطَّلِب» و«وَهَذِهِ عَمَّتُهُ صَفِيَّة»."
+        },
+        {
+            level: "المستوى الثاني: متوسط (الحوارات والمفردات)",
+            q: "أي الأسماء التالية هم أبناء الرسول ﷺ الذكور المذكورون في صفحة 26؟",
+            options: ["القاسم وعبد الله وإبراهيم", "العباس وحمزة والقاسم", "عبد الله وحمزة وعلي", "إبراهيم وعمر وعثمان"],
+            correct: 0,
+            explanation: "ذُكر في الحوار: «وَهَذَا ابْنُهُ القَاسِمُ، وَهَذَا ابْنُهُ عَبْدُ اللَّهِ، وَهَذَا ابْنُهُ إِبْرَاهِيم»."
+        },
+        {
+            level: "المستوى الثاني: متوسط (الحوارات والمفردات)",
+            q: "كم عدد بنات الرسول ﷺ المذكورات في شجرة الأسرة بصفحة 26 وما أسماؤهن؟",
+            options: ["ثلاث: فاطمة ورقية وزينب", "أربع: فاطمة ورقية وزينب وأم كلثوم", "أربع: آمنة وصفية وفاطمة وزينب", "ثلاث: صفية ورقية وأم كلثوم"],
+            correct: 1,
+            explanation: "البنات الأربع المذكورات هن: «فَاطِمَة، وَرُقَيَّة، وَزَيْنَب، وَأُمُّ كُلْثُوم»."
+        },
+        {
+            level: "المستوى الثاني: متوسط (الحوارات والمفردات)",
+            q: "في الحوار الثالث (صفحة 27) وقت أذان الفجر، أين كان «سَعْد» وماذا يفعل؟",
+            options: ["في الغرفة يقرأ القرآن", "في الحمام يتوضأ", "في المصلى يصلي", "في المسجد يصلي"],
+            correct: 1,
+            explanation: "قالت الأم: «سَعْدٌ فِي الحَمَّامِ يَتَوَضَّأُ»."
+        },
+        {
+            level: "المستوى الثاني: متوسط (الحوارات والمفردات)",
+            q: "في الحوار نفسه (صفحة 27)، ماذا كان يفعل «سَعِيد» وماذا كانت تفعل «سَعِيدَة»؟",
+            options: ["سعيد يتوضأ وسعيدة تقرأ القرآن", "سعيد في الغرفة يقرأ القرآن وسعيدة في المصلى تصلي", "سعيد في المسجد وسعيدة في الغرفة", "سعيد يلبس المعطف وسعيدة تتوضأ"],
+            correct: 1,
+            explanation: "قالت الأم: «سَعِيدٌ فِي الغُرْفَةِ يَقْرَأُ القُرْآنَ» و«سَعِيدَةُ فِي المُصَلَّى تُصَلِّي»."
+        },
+        {
+            level: "المستوى الثاني: متوسط (الحوارات والمفردات)",
+            q: "ما الشيئان اللذان سأل الأب عنهما سعداً وسعيداً قبل الذهاب إلى المسجد (صفحة 27)؟",
+            options: ["الكتاب والقلم", "المعطف (سأل سعداً) والنظارة (سأل سعيداً)", "الثوب والمصحف", "الساعة والمفتاح"],
+            correct: 1,
+            explanation: "سأل الأب: «أَيْنَ المِعْطَفُ يَا سَعْدُ؟» و«أَيْنَ النَّظَّارَةُ يَا سَعِيدُ؟»."
+        },
+        {
+            level: "المستوى الثاني: متوسط (الحوارات والمفردات)",
+            q: "ماذا نسمي أخت الأب في مفردات الأسرة (صفحة 28)؟",
+            options: ["جَدَّة", "عَمَّة", "وَالِدَة", "اِبْنَة"],
+            correct: 1,
+            explanation: "أخو الأب هو «عَمّ» وأخت الأب هي «عَمَّة»."
+        },
+        {
+            level: "المستوى الثاني: متوسط (الحوارات والمفردات)",
+            q: "ما العبارة التي قالها الأب لأولاده للانطلاق معاً إلى صلاة الفجر؟",
+            options: ["هَيَّا بِنَا إِلَى المَسْجِدِ", "هَذِهِ صُورَةُ أُسْرَتِي", "أَنَا فِي الغُرْفَةِ", "مَا جِنْسِيَّتُكَ؟"],
+            correct: 0,
+            explanation: "قال الأب في ختام الحوار الثالث بصفحة 27: «هَيَّا بِنَا إِلَى المَسْجِدِ»."
+        },
+
+        // --- المستوى الثالث: متقدم (الأسئلة 35 - 50: التراكيب والأصوات والكتابة) ---
+        {
+            level: "المستوى الثالث: متقدم (التراكيب والأصوات والكتابة)",
+            q: "عند مخاطبة مفردة مؤنثة نسأل عن بلدها بضبط التاء: ...",
+            options: ["مِنْ أَيْنَ أَنْتَ؟", "مِنْ أَيْنَ أَنْتِ؟", "مِنْ أَيْنَ هُوَ؟", "مِنْ أَيْنَ أَنَا؟"],
+            correct: 1,
+            explanation: "للمخاطبة المؤنثة نضع الكسرة تحت التاء: «مِنْ أَيْنَ أَنْتِ؟»."
+        },
+        {
+            level: "المستوى الثالث: متقدم (التراكيب والأصوات والكتابة)",
+            q: "ما الجملة الصحيحة نحوياً للنسبة إلى «سُورِيَا» للمؤنث كما في ملخص التراكيب (صفحة 12)؟",
+            options: ["هِيَ سُورِيّ", "هِيَ سُورِيَا", "هِيَ سُورِيَّةٌ", "هُوَ سُورِيَّةٌ"],
+            correct: 2,
+            explanation: "للمفردة المؤنثة نضيف ياء النسب والتاء المربوطة مع الضمير (هي): «هِيَ سُورِيَّةٌ»."
+        },
+        {
+            level: "المستوى الثالث: متقدم (التراكيب والأصوات والكتابة)",
+            q: "أكمل الجواب الصحيح نحوياً حسب ملخص التراكيب (صفحة 31): «أَيْنَ المِعْطَفُ؟ ...»",
+            options: ["هَذِهِ هِيَ المِعْطَفُ", "هَذَا هُوَ المِعْطَفُ", "هَذَا هِيَ المِعْطَفُ", "هَذِهِ هُوَ المِعْطَفُ"],
+            correct: 1,
+            explanation: "كلمة «المِعْطَف» مفرد مذكر، فنجمع معها «هَذَا + هُوَ»: «هَذَا هُوَ المِعْطَفُ»."
+        },
+        {
+            level: "المستوى الثالث: متقدم (التراكيب والأصوات والكتابة)",
+            q: "أكمل الجواب الصحيح نحوياً حسب التدريب الأول (صفحة 31): «أَيْنَ النَّظَّارَةُ؟ ...»",
+            options: ["هَذَا هُوَ النَّظَّارَةُ", "هَذِهِ هُوَ النَّظَّارَةُ", "هَذِهِ هِيَ النَّظَّارَةُ", "هَذَا هِيَ النَّظَّارَةُ"],
+            correct: 2,
+            explanation: "كلمة «النَّظَّارَة» مفرد مؤنث، فنستخدم «هَذِهِ + هِيَ»: «هَذِهِ هِيَ النَّظَّارَةُ»."
+        },
+        {
+            level: "المستوى الثالث: متقدم (التراكيب والأصوات والكتابة)",
+            q: "اختر الإجابة الصحيحة لملء الفراغ (صفحة 31): «أَيْنَ المُصَلَّى؟ ... المُصَلَّى.»",
+            options: ["هَذِهِ هِيَ", "هَذَا هُوَ", "هِيَ فِي", "أَنْتِ فِي"],
+            correct: 1,
+            explanation: "كلمة «المُصَلَّى» اسم مذكر رغم انتهائه بألف مقصورة، فنقول: «هَذَا هُوَ المُصَلَّى» كما في جدول صفحة 34."
+        },
+        {
+            level: "المستوى الثالث: متقدم (التراكيب والأصوات والكتابة)",
+            q: "حوّل الجملة من المذكر إلى المؤنث كما في صفحة 32: «شَرِيفٌ فِي الحَمَّامِ يَتَوَضَّأُ» -> «شَرِيفَةُ فِي البَيْتِ ...»",
+            options: ["يَتَوَضَّأُ", "تَتَوَضَّأُ", "تُصَلِّي", "يَقْرَأُ"],
+            correct: 1,
+            explanation: "الفعل المضارع مع الغائبة المؤنثة (شريفة) يبدأ بالتاء: «تَتَوَضَّأُ»."
+        },
+        {
+            level: "المستوى الثالث: متقدم (التراكيب والأصوات والكتابة)",
+            q: "حسب التدريب الرابع للتحويل في صفحة 33: «هَذَا وَالِدِي عَدْنَانُ» عند تحويلها للغائب المذكر تصبح:",
+            options: ["هَذَا وَالِدُهُ عَدْنَانُ", "هَذِهِ وَالِدَتُهُ عَدْنَانُ", "هَذَا وَالِدُكِ عَدْنَانُ", "هُوَ وَالِدِي عَدْنَانُ"],
+            correct: 0,
+            explanation: "عند تحويل ياء المتكلم (والدي) إلى ضمير الغائب المذكر نستخدم الهاء: «هَذَا وَالِدُهُ عَدْنَانُ»."
+        },
+        {
+            level: "المستوى الثالث: متقدم (التراكيب والأصوات والكتابة)",
+            q: "ما الفرق الصحيح في الاستخدام بين «مَنْ هَذَا؟» و«مَا هَذَا؟» كما في تدريب الكلام (صفحة 39)؟",
+            options: ["(مَنْ) لغير العاقل و(مَا) للعاقل", "(مَنْ) للسؤال عن العاقل كأحمد، و(مَا) لغير العاقل كالمسجد", "(مَنْ) للمذكر فقط و(مَا) للمؤنث فقط", "لا يوجد فرق بينهما"],
+            correct: 1,
+            explanation: "في أمثلة صفحة 39: «مَنْ هَذَا؟ هَذَا أَحْمَدُ» (للعاقل)، و«مَا هَذَا؟ هَذَا مَسْجِدٌ» (لغير العاقل)."
+        },
+        {
+            level: "المستوى الثالث: متقدم (التراكيب والأصوات والكتابة)",
+            q: "ما السؤال الصحيح الذي إجابته: «هَذِهِ صُورَةٌ» (صفحة 39)؟",
+            options: ["مَنْ هَذِهِ؟", "مَا هَذِهِ؟", "مَا هَذَا؟", "أَيْنَ هَذِهِ؟"],
+            correct: 1,
+            explanation: "كلمة «صُورَة» مفرد مؤنث غير عاقل، فيكون السؤال عنها: «مَا هَذِهِ؟»."
+        },
+        {
+            level: "المستوى الثالث: متقدم (التراكيب والأصوات والكتابة)",
+            q: "في درس الأصوات بالوحدة الأولى (صفحة 13)، بين أي حرفين متقاربين يدرّب الكتاب الطالب على التمييز السمعي والنطقي؟",
+            options: ["حرفا ( س / ص )", "حرفا ( ك / خ )", "حرفا ( ت / ط )", "حرفا ( د / ذ )"],
+            correct: 1,
+            explanation: "في صفحة 13 يركز التدريب الصوتي على التفريق بين ( ك ) و( خ ) مثل: كبير/خبير، كسوف/خسوف، فك/فخ."
+        },
+        {
+            level: "المستوى الثالث: متقدم (التراكيب والأصوات والكتابة)",
+            q: "أي ثنائية مما يلي وردت في صفحة 13 للتفريق الصوتي بين حرفي ( ك ) و( خ )؟",
+            options: ["أَلِيم / عَلِيم", "نَكِرَة / نَخِرَة", "سَأَلَ / سَعَلَ", "جَاءَ / جَاعَ"],
+            correct: 1,
+            explanation: "وردت ثنائية «نَكِرَة / نَخِرَة» و«مَكَرَ / مَخَرَ» في جدول الأصوات (ك / خ) بصفحة 13."
+        },
+        {
+            level: "المستوى الثالث: متقدم (التراكيب والأصوات والكتابة)",
+            q: "في درس الأصوات بالوحدة الثانية (صفحة 35)، بين أي صوتين يميز التدريب؟",
+            options: ["الهمزة والعين ( أ / ع )", "الحاء والخاء ( ح / خ )", "الطاء والظاء ( ط / ظ )", "السين والشين ( س / ش )"],
+            correct: 0,
+            explanation: "عنوان درس الأصوات في صفحة 35 هو: «أولاً: الأصوات أ / ع» مثل: أليم/عليم، يأمر/يعمر."
+        },
+        {
+            level: "المستوى الثالث: متقدم (التراكيب والأصوات والكتابة)",
+            q: "أي ثنائية كلمات مما يلي وردت في تدريب التمييز الصوتي بين ( أ / ع ) في صفحة 35؟",
+            options: ["كَانَ / خَانَ", "مَسَكَ / مَسَخَ", "يَقْرَأُ / يَقْرَعُ", "سَاكَ / سَاخَ"],
+            correct: 2,
+            explanation: "في آخر عمود بصفحة 35 وردت الثنائيات: «جَاءَ / جَاعَ»، «إِرْجَاء / إِرْجَاع»، و«يَقْرَأُ / يَقْرَعُ»."
+        },
+        {
+            level: "المستوى الثالث: متقدم (التراكيب والأصوات والكتابة)",
+            q: "ما الحروف الستة التي تدرّب عليها الطالب في قسم الكتابة بالوحدة الأولى (صفحتا 21 و22) والتي لا تتصل بما بعدها؟",
+            options: ["ب - ت - ث - ج - ح - خ", "أ - د - ذ - ر - ز - و", "ط - ظ - ع - غ - ف - ق", "س - ش - ص - ض - ك - ل"],
+            correct: 1,
+            explanation: "في صفحة 21 درس الطالب ( أ - د - ذ ) وفي صفحة 22 درس ( ر - ز - و )، وهي حروف الانفصال الستة."
+        },
+        {
+            level: "المستوى الثالث: متقدم (التراكيب والأصوات والكتابة)",
+            q: "ما مجموعتا الحروف التي تدرّب عليها الطالب في قسم الكتابة بالوحدة الثانية (صفحتا 43 و44)؟",
+            options: ["( ب - ت - ث ) و ( ط - ظ - ا )", "( ج - ح - خ ) و ( ع - غ - ف )", "( س - ش ) و ( ص - ض )", "( م - ن - هـ ) و ( ي - و )"],
+            correct: 0,
+            explanation: "في صفحة 43 العرض (أ): ( ب - ت - ث )، وفي صفحة 44 العرض (ب): ( ط - ظ - ا )."
+        },
+        {
+            level: "المستوى الثالث: متقدم (التراكيب والأصوات والكتابة)",
+            q: "في صفحة 43 من تدريبات الكتابة، أي ثلاث كلمات استُخدمت كأمثلة لحرف الثاء ( ث ) في أول الكلمة ووسطها وآخرها؟",
+            options: ["ثَوْب - عُثْمَان - كُرَّاث", "ثَلاثَة - اِثْنَان - مُثَلَّث", "ثَمَانِيَة - كَثِير - حَدِيث", "ثَمَر - مِثَال - بَحْث"],
+            correct: 0,
+            explanation: "جدول حرف الثاء في صفحة 43 أورد الكلمات الثلاث بالترتيب: «ثَوْب» (أول)، «عُثْمَان» (وسط)، «كُرَّاث» (آخر)."
+        }
+    ];
+
+    let currentIndex = 0;
+    let score = 0;
+    let correctCount = 0;
+    let timerInterval = null;
+    let timeLeft = 30;
+    let answered = false;
+
+    const startScreen = document.getElementById('startScreen');
+    const quizScreen = document.getElementById('quizScreen');
+    const endScreen = document.getElementById('endScreen');
+    const gameHeader = document.getElementById('gameHeader');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const qCounter = document.getElementById('qCounter');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const levelBadge = document.getElementById('levelBadge');
+    const questionText = document.getElementById('questionText');
+    const optionsGrid = document.getElementById('optionsGrid');
+    const feedbackBox = document.getElementById('feedbackBox');
+    const nextBtn = document.getElementById('nextBtn');
+
+    function startGame() {
+        initAudio();
+        currentIndex = 0;
+        score = 0;
+        correctCount = 0;
+        startScreen.classList.remove('active');
+        endScreen.classList.remove('active');
+        quizScreen.classList.add('active');
+        gameHeader.style.display = 'flex';
+        progressContainer.style.display = 'block';
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        answered = false;
+        clearInterval(timerInterval);
+        timeLeft = 30;
+        updateTimerUI();
+
+        const qObj = questions[currentIndex];
+        qCounter.textContent = `${currentIndex + 1} / ${questions.length}`;
+        scoreDisplay.textContent = score;
+        progressBar.style.width = `${((currentIndex) / questions.length) * 100}%`;
+
+        levelBadge.textContent = qObj.level;
+        questionText.textContent = qObj.q;
+
+        optionsGrid.innerHTML = '';
+        feedbackBox.className = 'feedback-box';
+        feedbackBox.style.display = 'none';
+        nextBtn.style.display = 'none';
+
+        qObj.options.forEach((optText, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerHTML = `<span>${optText}</span>`;
+            btn.onclick = () => selectAnswer(idx);
+            optionsGrid.appendChild(btn);
+        });
+
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            updateTimerUI();
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                handleTimeOut();
+            }
+        }, 1000);
+    }
+
+    function updateTimerUI() {
+        timerDisplay.textContent = `⏱ ${timeLeft} ثانية`;
+        if (timeLeft <= 7) {
+            timerDisplay.classList.add('warning');
+        } else {
+            timerDisplay.classList.remove('warning');
+        }
+    }
+
+    function selectAnswer(selectedIndex) {
+        if (answered) return;
+        answered = true;
+        clearInterval(timerInterval);
+
+        const qObj = questions[currentIndex];
+        const buttons = optionsGrid.querySelectorAll('.option-btn');
+        buttons.forEach(b => b.disabled = true);
+
+        if (selectedIndex === qObj.correct) {
+            buttons[selectedIndex].classList.add('correct');
+            buttons[selectedIndex].innerHTML += `<span>✔</span>`;
+            score += 10;
+            correctCount++;
+            scoreDisplay.textContent = score;
+            playSound('correct');
+
+            feedbackBox.className = 'feedback-box correct';
+            feedbackBox.innerHTML = `✅ <strong>إجابة صحيحة! أحسنت (+10 نقاط)</strong><br>${qObj.explanation}`;
+        } else {
+            buttons[selectedIndex].classList.add('wrong');
+            buttons[selectedIndex].innerHTML += `<span>✖</span>`;
+            buttons[qObj.correct].classList.add('correct');
+            buttons[qObj.correct].innerHTML += `<span>✔</span>`;
+            playSound('wrong');
+
+            feedbackBox.className = 'feedback-box wrong';
+            feedbackBox.innerHTML = `❌ <strong>إجابة خاطئة!</strong><br><strong>التصحيح:</strong> الإجابة الصحيحة هي «${qObj.options[qObj.correct]}».<br>${qObj.explanation}`;
+        }
+
+        feedbackBox.style.display = 'block';
+        nextBtn.textContent = (currentIndex === questions.length - 1) ? "عرض النتيجة النهائية 🏆" : "السؤال التالي ⬅";
+        nextBtn.style.display = 'inline-block';
+    }
+
+    function handleTimeOut() {
+        if (answered) return;
+        answered = true;
+
+        const qObj = questions[currentIndex];
+        const buttons = optionsGrid.querySelectorAll('.option-btn');
+        buttons.forEach(b => b.disabled = true);
+
+        buttons[qObj.correct].classList.add('correct');
+        buttons[qObj.correct].innerHTML += `<span>✔</span>`;
+        playSound('wrong');
+
+        feedbackBox.className = 'feedback-box wrong';
+        feedbackBox.innerHTML = `⏰ <strong>انتهى الوقت (30 ثانية)!</strong><br><strong>التصحيح:</strong> الإجابة الصحيحة هي «${qObj.options[qObj.correct]}».<br>${qObj.explanation}`;
+        feedbackBox.style.display = 'block';
+
+        nextBtn.textContent = (currentIndex === questions.length - 1) ? "عرض النتيجة النهائية 🏆" : "السؤال التالي ⬅";
+        nextBtn.style.display = 'inline-block';
+    }
+
+    function nextQuestion() {
+        currentIndex++;
+        if (currentIndex < questions.length) {
+            loadQuestion();
+        } else {
+            showEndScreen();
+        }
+    }
+
+    function showEndScreen() {
+        quizScreen.classList.remove('active');
+        endScreen.classList.add('active');
+        gameHeader.style.display = 'none';
+        progressBar.style.width = '100%';
+
+        document.getElementById('finalScore').textContent = score;
+        const percentage = Math.round((correctCount / questions.length) * 100);
+        let gradeMsg = "";
+        if (percentage >= 90) gradeMsg = "مستوى ممتاز! إتقان رائع للوحدتين الأولى والثانية.";
+        else if (percentage >= 75) gradeMsg = "مستوى جيد جداً! أداء مميز.";
+        else if (percentage >= 50) gradeMsg = "مستوى جيد! يمكنك المراجعة لتحقيق العلامة الكاملة.";
+        else gradeMsg = "حاول مرة أخرى بعد مراجعة الحوارات والتراكيب.";
+
+        document.getElementById('finalSummary').innerHTML =
+            `أجبت بشكل صحيح على <strong>${correctCount}</strong> من أصل <strong>${questions.length}</strong> سؤالاً (${percentage}%).<br>${gradeMsg}`;
+    }
+
+    function restartGame() {
+        startGame();
+    }
+</script>
+
+</body>
+</html>
